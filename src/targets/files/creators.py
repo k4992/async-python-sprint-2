@@ -12,8 +12,8 @@ class FileCreatorTarget(Target):
         super().__init__(*args, **kwargs)
 
     def underlying(self, *args, **kwargs) -> Generator | Coroutine:
-        pathlib.Path(self.filepath).touch(mode=755, exist_ok=True)
         yield
+        pathlib.Path(self.filepath).touch(mode=755, exist_ok=True)
 
     def run(self, *args, **kwargs):
         self.gen_or_coro.send(None)
