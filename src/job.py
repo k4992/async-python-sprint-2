@@ -1,8 +1,8 @@
 from uuid import uuid4
 from enum import Enum
+from typing import Generator, Coroutine
 
 from src.utils import string_to_timestamp
-from src.targets import Target
 
 
 class JobStatus(Enum):
@@ -17,7 +17,7 @@ class Job:
     def __init__(
         self,
         *,
-        target: Target,
+        target: Generator | Coroutine,
         start_at: str = "",
         max_working_time: int = -1,
         tries: int = 0,
@@ -36,7 +36,7 @@ class Job:
 
     def run(self, *args, **kwargs):
         self.status = JobStatus.STARTED
-        self.target.run(None)
+        self.target.send(None)
 
     def pause(self) -> None:
         self.status = JobStatus.PAUSED

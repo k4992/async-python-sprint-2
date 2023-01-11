@@ -52,10 +52,5 @@ class Scheduler(metaclass=SingletonMeta):
                 continue
             self.reschedule(job)
 
-    def restart(self):
-        # TODO: restart
-        pass
-
     def exit(self):
-        # TODO: exit
         pass
