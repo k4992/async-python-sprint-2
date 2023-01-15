@@ -1,26 +1,42 @@
-from src.job import Job
+import argparse
+
 from src.scheduler import Scheduler
-from src.targets import (
-    create_file, read_file, write_to_file)
+from src.jobs.files import (
+    CreateFileJob, ReadFileJob, WriteFileJob)
 
 
-if __name__ == "__main__":
-    file_writer = write_to_file(
-            filepath="/Users/space_monkey/Desktop/tmp1.txt")
-    file_reader = read_file(filepath="./log.txt", target=file_writer)
-    file_creator = create_file(
-            filepath="/Users/space_monkey/Desktop/tmp1.txt")
-
-    file_creator_job = Job(target=file_reader, depends_on=[
-        Job(target=file_creator)
-    ])
-
+def main(state_filepath: str, restore: bool = False):
     scheduler = Scheduler()
-    jobs = [file_creator_job]
-    for job in jobs:
-        scheduler.schedule(job)
+
+    if restore:
+        scheduler.restore_state(state_filepath)
+    else:
+        # write your own jobs and tasks
+        file_creator_job = ReadFileJob(
+                filepath="./log.txt",
+                target=WriteFileJob(
+                        filepath="/Users/space_monkey/Desktop/tmp1.txt"),
+                depends_on=[
+                    CreateFileJob(
+                            filepath="/Users/space_monkey/Desktop/tmp1.txt",
+                    )
+                ]
+        )
+        scheduler.schedule(file_creator_job)
 
     try:
         scheduler.run()
     except KeyboardInterrupt:
         scheduler.exit()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+            prog="Scheduler",
+            description="Async Python: Sprint № 2")
+    parser.add_argument('-r', '--restore', action="store_true", default=False)
+    parser.add_argument('-f', '--state-file', default="state.json")
+
+    args = parser.parse_args()
+
+    main(restore=args.restore, state_filepath=args.state_file)
