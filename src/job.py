@@ -4,8 +4,7 @@ from typing import Optional, Any
 from collections.abc import Generator, Coroutine
 from abc import ABC, abstractmethod
 
-from src.utils import (
-    string_to_timestamp, load_coro, extract_data_from_coroutine)
+from src.utils import string_to_timestamp
 
 
 class JobStatus(Enum):
@@ -23,8 +22,7 @@ class Job(ABC):
         start_at: str = "",
         max_working_time: int = -1,
         tries: int = 0,
-        depends_on: list["Job"] = None,
-        **kwargs
+        depends_on: list["Job"] = None
     ):
         self.job_id = str(uuid4())
         self.start_at = start_at
