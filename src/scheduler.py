@@ -3,6 +3,7 @@ from queue import PriorityQueue
 from collections import defaultdict
 
 from src.job import Job
+from src.job_factory import JobFactory
 from src.mixins import SingletonMeta
 
 
@@ -57,14 +58,15 @@ class Scheduler(metaclass=SingletonMeta):
     def restore_state(self, filepath: str):
         with open(filepath, "r") as f:
             state = json.load(f)
+
         self.pool_size = state.get("pool_size", 10)
         self.waiting = defaultdict(list, state.get("waiting", {}))
         self.available_jobs = {
-            job_id: Job.from_json(job) for job_id, job
+            job_id: JobFactory.from_json(job) for job_id, job
             in state.get("available_jobs", {}).items()
         }
         self.ready = PriorityQueue(maxsize=self.pool_size)
-        for job in [Job.from_json(x) for x in state.get("ready")]:
+        for job in [JobFactory.from_json(x) for x in state.get("ready")]:
             self.schedule(job)
 
     def exit(self):

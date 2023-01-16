@@ -2,13 +2,8 @@ import pathlib
 from collections.abc import Generator, Coroutine
 
 from src.utils import coroutine
+from src.mixins.files import FilesJobMixin
 from src.job import Job
-
-
-class FilesJobMixin:
-    def __init__(self, filepath: str, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.filepath = filepath
 
 
 class CreateFileJob(FilesJobMixin, Job):
