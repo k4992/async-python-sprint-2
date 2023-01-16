@@ -23,7 +23,6 @@ class Job(ABC):
         *,
         job_id: str | None = None,
         parent_id: str | None = None,
-        priority: int | None = None,
         target: Optional["Job"] = None,
         start_at: str = "",
         max_working_time: int = -1,
@@ -37,18 +36,9 @@ class Job(ABC):
         self.tries = tries
         self.target = target
         self.depends_on = depends_on or []
-        self.priority = self.__get_priority(priority=priority, start_at=start_at)
         self.status: JobStatus = JobStatus.NOT_STARTED
         self.parent_id: str | None = parent_id
         self.gen_or_coro: Generator | Coroutine | None = None
-
-    @staticmethod
-    def __get_priority(priority: int | None = None, start_at: str = "") -> int | float:
-        if priority is not None:
-            return priority
-        if start_at:
-            return string_to_timestamp(start_at)
-        return 0
 
     def run(self, data: Any = None):
         if not self.is_ready_to_start:
