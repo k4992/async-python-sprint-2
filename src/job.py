@@ -1,4 +1,5 @@
 import time
+import datetime
 from uuid import uuid4
 from enum import Enum
 from typing import Optional, Any
@@ -50,18 +51,27 @@ class Job(ABC):
         return 0
 
     def run(self, data: Any = None):
-        if self.status == JobStatus.NOT_STARTED:
-            self.gen_or_coro = self.underlying()
-        self.status = JobStatus.STARTED
+        if not self.is_ready_to_start:
+            return
 
         start_time = time.time()
         self.gen_or_coro.send(data)
-
         self.running_time += time.time() - start_time
         if self.has_exceeded_time_limit:
             raise TimeLimitExceededException(
                     message=f"Time limit has exceeded for job {self.job_id}."
             )
+
+    @property
+    def is_ready_to_start(self) -> bool:
+        if self.status == JobStatus.STARTED:
+            return True
+        if not self.start_at or string_to_timestamp(self.start_at) \
+                <= datetime.datetime.now().timestamp():
+            self.gen_or_coro = self.underlying()
+            self.status = JobStatus.STARTED
+            return True
+        return False
 
     @property
     def has_exceeded_time_limit(self) -> bool:

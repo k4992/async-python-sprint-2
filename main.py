@@ -20,7 +20,16 @@ def main(state_filepath: str, restore: bool = False):
             ),
             depends_on=[
                 CreateFileJob(
+                    start_at="21:32",
                     filepath="/Users/space_monkey/Desktop/tmp1.txt",
+                ),
+                CreateFileJob(
+                        start_at="21:37",
+                        filepath="/Users/space_monkey/Desktop/tmp2.txt",
+                ),
+                CreateFileJob(
+                        start_at="21:38",
+                        filepath="/Users/space_monkey/Desktop/tmp3.txt",
                 )
             ],
         )

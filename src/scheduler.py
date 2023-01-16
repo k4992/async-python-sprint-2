@@ -1,6 +1,5 @@
 import json
-from queue import PriorityQueue
-from collections import defaultdict
+from collections import defaultdict, deque
 
 from src.job import Job
 from src.job_factory import JobFactory
@@ -11,7 +10,7 @@ from src.exceptions import TimeLimitExceededException
 class Scheduler(metaclass=SingletonMeta):
     def __init__(self, pool_size: int = 10):
         self.pool_size = pool_size
-        self.ready = PriorityQueue(maxsize=self.pool_size)
+        self.ready = deque(maxlen=self.pool_size)
         self.waiting = defaultdict(list)
         self.available_jobs = {}
 
@@ -19,7 +18,7 @@ class Scheduler(metaclass=SingletonMeta):
         main_job_id = job.job_id
         self.available_jobs[main_job_id] = job
         if not job.depends_on:
-            self.ready.put(job)
+            self.ready.append(job)
             return
 
         for j in job.depends_on:
@@ -28,13 +27,13 @@ class Scheduler(metaclass=SingletonMeta):
             self.available_jobs[j.job_id] = j
 
             if not j.depends_on:
-                self.ready.put(j)
+                self.ready.append(j)
             else:
                 self.schedule(j)
 
     def reschedule(self, job: Job):
         self.available_jobs[job.job_id] = job
-        self.ready.put(job)
+        self.ready.appendleft(job)
 
     def stop(self, job: Job):
         job.stop()
@@ -44,11 +43,11 @@ class Scheduler(metaclass=SingletonMeta):
             self.waiting[job.parent_id].remove(job.job_id)
             if len(self.waiting[job.parent_id]) == 0:
                 del self.waiting[job.parent_id]
-                self.ready.put(self.available_jobs.get(job.parent_id))
+                self.ready.append(self.available_jobs.get(job.parent_id))
 
     def run(self):
         while self.available_jobs:
-            job: Job = self.ready.get()
+            job: Job = self.ready.pop()
             try:
                 job.run()
             except (StopIteration, TimeLimitExceededException) as _:
@@ -66,7 +65,7 @@ class Scheduler(metaclass=SingletonMeta):
             job_id: JobFactory.from_json(job)
             for job_id, job in state.get("available_jobs", {}).items()
         }
-        self.ready = PriorityQueue(maxsize=self.pool_size)
+        self.ready = deque(maxlen=self.pool_size)
         for job in [JobFactory.from_json(x) for x in state.get("ready")]:
             self.schedule(job)
 
@@ -77,8 +76,8 @@ class Scheduler(metaclass=SingletonMeta):
             available_jobs={},
             waiting=dict(self.waiting),
         )
-        while type(self.ready) == PriorityQueue and not self.ready.empty():
-            job = self.ready.get()
+        while self.ready:
+            job = self.ready.pop()
             state["ready"].append(job.to_json())
 
         for job_id, job in self.available_jobs.items():
@@ -87,6 +86,6 @@ class Scheduler(metaclass=SingletonMeta):
         with open("state.json", "w") as f:
             json.dump(state, f)
 
-        self.ready = PriorityQueue(maxsize=self.pool_size)
+        self.ready = deque(maxlen=self.pool_size)
         self.waiting = defaultdict(list)
         self.available_jobs = {}
