@@ -11,6 +11,7 @@ def coroutine(f):
         coro = f(*args, **kwargs)
         next(coro)
         return coro
+
     return wrapped
 
 
@@ -27,6 +28,6 @@ def string_to_timestamp(date_as_str: str) -> float:
 
     if value is None:
         raise ValueError(
-                f"Failed to convert {date_as_str} to datetime. Allowed formats are {formats}."
+            f"Failed to convert {date_as_str} to datetime. Allowed formats are {formats}."
         )
     return value.timestamp()

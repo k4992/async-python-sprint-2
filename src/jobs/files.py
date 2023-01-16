@@ -7,14 +7,12 @@ from src.job import Job
 
 
 class CreateFileJob(FilesJobMixin, Job):
-
     def underlying(self) -> Generator:
         yield
         pathlib.Path(self.filepath).touch(mode=755, exist_ok=True)
 
 
 class WriteFileJob(FilesJobMixin, Job):
-
     @coroutine
     def underlying(self) -> Coroutine:
         with open(self.filepath, "w") as f:
@@ -23,7 +21,6 @@ class WriteFileJob(FilesJobMixin, Job):
 
 
 class ReadFileJob(FilesJobMixin, Job):
-
     @coroutine
     def underlying(self) -> Coroutine:
         with open(self.filepath, "r") as f:

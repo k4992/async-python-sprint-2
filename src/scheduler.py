@@ -5,6 +5,7 @@ from collections import defaultdict
 from src.job import Job
 from src.job_factory import JobFactory
 from src.mixins import SingletonMeta
+from src.exceptions import TimeLimitExceededException
 
 
 class Scheduler(metaclass=SingletonMeta):
@@ -50,7 +51,7 @@ class Scheduler(metaclass=SingletonMeta):
             job: Job = self.ready.get()
             try:
                 job.run()
-            except StopIteration:
+            except (StopIteration, TimeLimitExceededException) as _:
                 self.stop(job)
                 continue
             self.reschedule(job)
@@ -62,8 +63,8 @@ class Scheduler(metaclass=SingletonMeta):
         self.pool_size = state.get("pool_size", 10)
         self.waiting = defaultdict(list, state.get("waiting", {}))
         self.available_jobs = {
-            job_id: JobFactory.from_json(job) for job_id, job
-            in state.get("available_jobs", {}).items()
+            job_id: JobFactory.from_json(job)
+            for job_id, job in state.get("available_jobs", {}).items()
         }
         self.ready = PriorityQueue(maxsize=self.pool_size)
         for job in [JobFactory.from_json(x) for x in state.get("ready")]:
@@ -71,10 +72,10 @@ class Scheduler(metaclass=SingletonMeta):
 
     def exit(self):
         state = dict(
-                pool_size=self.pool_size,
-                ready=[],
-                available_jobs={},
-                waiting=dict(self.waiting)
+            pool_size=self.pool_size,
+            ready=[],
+            available_jobs={},
+            waiting=dict(self.waiting),
         )
         while type(self.ready) == PriorityQueue and not self.ready.empty():
             job = self.ready.get()

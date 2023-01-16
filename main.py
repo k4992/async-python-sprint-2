@@ -1,8 +1,7 @@
 import argparse
 
 from src.scheduler import Scheduler
-from src.jobs.files import (
-    CreateFileJob, ReadFileJob, WriteFileJob)
+from src.jobs.files import CreateFileJob, ReadFileJob, WriteFileJob
 
 
 def main(state_filepath: str, restore: bool = False):
@@ -13,14 +12,17 @@ def main(state_filepath: str, restore: bool = False):
     else:
         # write your own jobs and tasks
         file_creator_job = ReadFileJob(
-                filepath="./log.txt",
-                target=WriteFileJob(
-                        filepath="/Users/space_monkey/Desktop/tmp1.txt"),
-                depends_on=[
-                    CreateFileJob(
-                            filepath="/Users/space_monkey/Desktop/tmp1.txt",
-                    )
-                ]
+            filepath="./log.txt",
+            max_working_time=1,
+            target=WriteFileJob(
+                    max_working_time=1,
+                    filepath="/Users/space_monkey/Desktop/tmp1.txt"
+            ),
+            depends_on=[
+                CreateFileJob(
+                    filepath="/Users/space_monkey/Desktop/tmp1.txt",
+                )
+            ],
         )
         scheduler.schedule(file_creator_job)
 
@@ -32,10 +34,10 @@ def main(state_filepath: str, restore: bool = False):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-            prog="Scheduler",
-            description="Async Python: Sprint № 2")
-    parser.add_argument('-r', '--restore', action="store_true", default=False)
-    parser.add_argument('-f', '--state-file', default="state.json")
+        prog="Scheduler", description="Async Python: Sprint № 2"
+    )
+    parser.add_argument("-r", "--restore", action="store_true", default=False)
+    parser.add_argument("-f", "--state-file", default="state.json")
 
     args = parser.parse_args()
 
