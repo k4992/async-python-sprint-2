@@ -1,5 +1,9 @@
+import yaml
+import logging
+import logging.config
 import datetime as dt
 from functools import wraps
+
 
 TIME_FORMAT = "%H:%M"
 DATETIME_FORMAT = "%Y-%m-%d %H:%M"
@@ -31,3 +35,9 @@ def string_to_timestamp(date_as_str: str) -> float:
             f"Failed to convert {date_as_str} to datetime. Allowed formats are {formats}."
         )
     return value.timestamp()
+
+
+def setup_logging(logging_config_path: str = "logging.yml"):
+    with open(logging_config_path, "r") as f:
+        config = yaml.safe_load(f.read())
+        logging.config.dictConfig(config)

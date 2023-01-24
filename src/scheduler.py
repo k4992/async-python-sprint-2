@@ -1,10 +1,11 @@
 import json
+import logging
 from collections import defaultdict, deque
 
 from src.job import Job
 from src.job_factory import JobFactory
 from src.mixins import SingletonMeta
-from src.exceptions import TimeLimitExceededException
+from src.exceptions import TimeLimitExceededException, MaxAttemptExceededException
 
 
 class Scheduler(metaclass=SingletonMeta):
@@ -15,6 +16,8 @@ class Scheduler(metaclass=SingletonMeta):
         self.available_jobs = {}
 
     def schedule(self, job: Job):
+        logging.info(f"Scheduling job with id {job.job_id}.")
+
         main_job_id = job.job_id
         self.available_jobs[main_job_id] = job
         if not job.depends_on:
@@ -46,16 +49,25 @@ class Scheduler(metaclass=SingletonMeta):
                 self.ready.append(self.available_jobs.get(job.parent_id))
 
     def run(self):
+        logging.info(f"Starting scheduler...")
         while self.available_jobs:
             job: Job = self.ready.pop()
             try:
+                logging.debug(f"Running {job.__class__.__name__} {job.job_id}.")
                 job.run()
-            except (StopIteration, TimeLimitExceededException) as _:
+            except (
+                StopIteration,
+                TimeLimitExceededException,
+                MaxAttemptExceededException,
+            ) as _:
+                logging.debug(f"Stopping {job.__class__.__name__}: {job.job_id}.")
                 self.stop(job)
                 continue
             self.reschedule(job)
 
     def restore_state(self, filepath: str):
+        logging.info(f"Restoring scheduler state from {filepath}")
+
         with open(filepath, "r") as f:
             state = json.load(f)
 
@@ -69,7 +81,11 @@ class Scheduler(metaclass=SingletonMeta):
         for job in [JobFactory.from_json(x) for x in state.get("ready")]:
             self.schedule(job)
 
+        logging.info("State is successfully restored.")
+
     def exit(self):
+        logging.info(f"Exiting scheduler, saving state of scheduler.")
+
         state = dict(
             pool_size=self.pool_size,
             ready=[],
@@ -89,3 +105,5 @@ class Scheduler(metaclass=SingletonMeta):
         self.ready = deque(maxlen=self.pool_size)
         self.waiting = defaultdict(list)
         self.available_jobs = {}
+
+        logging.info(f"Exit.")

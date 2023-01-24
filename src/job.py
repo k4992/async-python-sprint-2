@@ -2,12 +2,24 @@ import time
 import datetime
 from uuid import uuid4
 from enum import Enum
+from functools import wraps
 from typing import Optional, Any
-from collections.abc import Generator, Coroutine
+from collections.abc import Generator, Coroutine, Callable
 from abc import ABC, abstractmethod
 
 from src.utils import string_to_timestamp
-from src.exceptions import TimeLimitExceededException
+from src.exceptions import TimeLimitExceededException, MaxAttemptExceededException
+
+
+def timed_run(func: Callable):
+    @wraps(func)
+    def inner(job: "Job", *args, **kwargs):
+        start_time = time.time()
+        res = func(job, *args, **kwargs)
+        job.running_time += time.time() - start_time
+        return res
+
+    return inner
 
 
 class JobStatus(Enum):
@@ -32,8 +44,9 @@ class Job(ABC):
         self.job_id = job_id if job_id else str(uuid4())
         self.start_at = start_at
         self.max_working_time = max_working_time
+        self.max_retries = tries
         self.running_time = 0
-        self.tries = tries
+        self.tries = 0
         self.target = target
         self.depends_on = depends_on or []
         self.status: JobStatus = JobStatus.NOT_STARTED
@@ -41,23 +54,35 @@ class Job(ABC):
         self.gen_or_coro: Generator | Coroutine | None = None
 
     def run(self, data: Any = None):
-        if not self.is_ready_to_start:
-            return
-
-        start_time = time.time()
-        self.gen_or_coro.send(data)
-        self.running_time += time.time() - start_time
         if self.has_exceeded_time_limit:
             raise TimeLimitExceededException(
-                    message=f"Time limit has exceeded for job {self.job_id}."
+                message=f"Time limit has exceeded for job {self.job_id}."
             )
+
+        try:
+            if not self.is_ready_to_start:
+                return
+            self.__run(data)
+        except Exception as _:
+            if self.max_retries <= 0:
+                raise StopIteration
+
+            self.tries += 1
+            if self.tries >= self.max_retries:
+                raise MaxAttemptExceededException
+
+    @timed_run
+    def __run(self, data: Any = None):
+        self.gen_or_coro.send(data)
 
     @property
     def is_ready_to_start(self) -> bool:
         if self.status == JobStatus.STARTED:
             return True
-        if not self.start_at or string_to_timestamp(self.start_at) \
-                <= datetime.datetime.now().timestamp():
+        if (
+            not self.start_at
+            or string_to_timestamp(self.start_at) <= datetime.datetime.now().timestamp()
+        ):
             self.gen_or_coro = self.underlying()
             self.status = JobStatus.STARTED
             return True
@@ -74,7 +99,7 @@ class Job(ABC):
         raise NotImplementedError
 
     def stop(self) -> None:
-        self.status = JobStatus.FINISHED
+        self.status = JobStatus.FINISHED if self.status.STARTED else self.status
         if self.gen_or_coro:
             self.gen_or_coro.close()
 
