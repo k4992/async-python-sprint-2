@@ -1,4 +1,5 @@
 import time
+import logging
 import datetime
 from uuid import uuid4
 from enum import Enum
@@ -54,7 +55,10 @@ class Job(ABC):
         self.gen_or_coro: Generator | Coroutine | None = None
 
     def run(self, data: Any = None):
+        logging.debug(f"Trying to running {self.__class__.__name__} {self.job_id}.")
+
         if self.has_exceeded_time_limit:
+            logging.warning(f"Time limit has exceeded for job {self.job_id}.")
             raise TimeLimitExceededException(
                 message=f"Time limit has exceeded for job {self.job_id}."
             )
@@ -62,13 +66,22 @@ class Job(ABC):
         try:
             if not self.is_ready_to_start:
                 return
+
             self.__run(data)
-        except Exception as _:
-            if self.max_retries <= 0:
+        except Exception as ex:
+            if self.max_retries <= 0 or ex == StopIteration:
+                if type(ex) != StopIteration:
+                    logging.exception(ex)
+                else:
+                    logging.info(f"Job {self.job_id} has run it's course.")
                 raise StopIteration
 
+            logging.exception(ex)
             self.tries += 1
             if self.tries >= self.max_retries:
+                logging.warning(
+                    f"Job {self.job_id} reached maximum number of attempts."
+                )
                 raise MaxAttemptExceededException
 
     @timed_run

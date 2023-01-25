@@ -2,7 +2,6 @@ import argparse
 
 from src.scheduler import Scheduler
 from src.utils import setup_logging
-from src.jobs.files import CreateFileJob, ReadFileJob, WriteFileJob
 
 
 def main(state_filepath: str, restore: bool = False):
@@ -11,30 +10,11 @@ def main(state_filepath: str, restore: bool = False):
     if restore:
         scheduler.restore_state(state_filepath)
     else:
-        # write your own jobs and tasks
-        file_creator_job = ReadFileJob(
-            filepath="./log.txt",
-            tries=3,
-            max_working_time=1,
-            target=WriteFileJob(
-                max_working_time=1, filepath="/Users/space_monkey/Desktop/tmp1.txt"
-            ),
-            depends_on=[
-                CreateFileJob(
-                    filepath="/Users/space_monkey/Desktop/tmp1.txt",
-                ),
-                # CreateFileJob(
-                #         start_at="21:37",
-                #         filepath="/Users/space_monkey/Desktop/tmp2.txt",
-                # ),
-                # CreateFileJob(
-                #         start_at="21:38",
-                #         filepath="/Users/space_monkey/Desktop/tmp3.txt",
-                # )
-            ],
-        )
-        scheduler.schedule(file_creator_job)
+        from setup_jobs import JOBS
 
+        # see EXAMPLE.md file
+        for job in JOBS:
+            scheduler.schedule(job)
     try:
         scheduler.run()
     except KeyboardInterrupt:

@@ -48,19 +48,24 @@ class Scheduler(metaclass=SingletonMeta):
                 del self.waiting[job.parent_id]
                 self.ready.append(self.available_jobs.get(job.parent_id))
 
-    def run(self):
+    def run(self, atomic: bool = False):
+        # use atomic run only for debugging
+
         logging.info(f"Starting scheduler...")
         while self.available_jobs:
             job: Job = self.ready.pop()
             try:
-                logging.debug(f"Running {job.__class__.__name__} {job.job_id}.")
                 job.run()
             except (
                 StopIteration,
                 TimeLimitExceededException,
                 MaxAttemptExceededException,
-            ) as _:
+            ) as ex:
                 logging.debug(f"Stopping {job.__class__.__name__}: {job.job_id}.")
+
+                if atomic and type(ex) != StopIteration:
+                    raise ex
+
                 self.stop(job)
                 continue
             self.reschedule(job)
