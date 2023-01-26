@@ -21,7 +21,7 @@ class TestScheduler:
         file_creator_job = ReadFileJob(
             filepath=long_file_path,
             tries=3,
-            max_working_time=1,
+            max_working_time=0.0000000001,
             target=WriteFileJob(
                 filepath=temp_file_path
             ),
