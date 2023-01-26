@@ -69,7 +69,7 @@ class Job(ABC):
 
             self.__run(data)
         except Exception as ex:
-            if self.max_retries <= 0 or ex == StopIteration:
+            if self.max_retries <= 0 or type(ex) == StopIteration:
                 if type(ex) != StopIteration:
                     logging.exception(ex)
                 else:
